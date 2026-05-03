@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Algebra for AI 10 &mdash; Attention as Linear Algebra</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}]})"></script>
+    <style>
+        :root { --bg-primary: #0a0a0a; --bg-card: #0d1117; --bg-code: #161b22; --text-primary: #e6edf3; --text-secondary: #8b949e; --accent: #a78bfa; --accent-dim: #a78bfa44; --accent-glow: #a78bfa33; --accent-2: #f472b6; --accent-3: #fbbf24; --accent-4: #34d399; --border: #21262d; --font-display: 'Space Grotesk', sans-serif; --font-mono: 'JetBrains Mono', 'Fira Code', monospace; --font-body: 'Inter', sans-serif; --max-width: 900px; }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body { background: var(--bg-primary); color: var(--text-primary); font-family: var(--font-body); font-size: 17px; line-height: 1.7; overflow-x: hidden; }
+        .hero { min-height: 100vh; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 2rem 1.5rem; text-align: center; position: relative; }
+        .hero::before { content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 700px; height: 600px; background: radial-gradient(circle, var(--accent-glow) 0%, transparent 70%); pointer-events: none; z-index: 0; }
+        .hero > * { position: relative; z-index: 1; }
+        .series-label { font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent); letter-spacing: 0.15em; text-transform: uppercase; margin-bottom: 1rem; }
+        .hero h1 { font-family: var(--font-display); font-size: clamp(2rem, 5vw, 3.2rem); font-weight: 700; color: var(--text-primary); line-height: 1.2; margin-bottom: 1rem; }
+        .hero h1 .accent { color: var(--accent); }
+        .hero .subtitle { font-size: 1.1rem; color: var(--text-secondary); max-width: 640px; margin-bottom: 2rem; }
+        .tags { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; margin-bottom: 2.5rem; }
+        .tag { font-family: var(--font-mono); font-size: 0.75rem; padding: 0.25rem 0.75rem; border-radius: 999px; border: 1px solid var(--accent); color: var(--accent); background: var(--accent-dim); white-space: nowrap; }
+        .pipeline { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 0.25rem; margin-bottom: 1rem; max-width: var(--max-width); }
+        .pipeline-step { font-family: var(--font-mono); font-size: 0.7rem; padding: 0.3rem 0.7rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; color: var(--text-secondary); white-space: nowrap; }
+        .pipeline-arrow { color: var(--accent); font-size: 0.9rem; font-weight: 700; }
+        .slide { min-height: 100vh; max-width: var(--max-width); margin: 0 auto; padding: 4rem 1.5rem; position: relative; display: flex; flex-direction: column; justify-content: center; }
+        .slide-number { font-family: var(--font-display); font-size: 5rem; font-weight: 700; color: var(--accent-dim); position: absolute; top: 2rem; right: 1.5rem; line-height: 1; user-select: none; }
+        .slide h2 { font-family: var(--font-display); font-size: 1.9rem; font-weight: 700; color: var(--accent); margin-bottom: 1.5rem; line-height: 1.25; }
+        .slide h3 { font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; color: var(--text-primary); margin-top: 1.5rem; margin-bottom: 0.75rem; }
+        .slide p { margin-bottom: 1rem; color: var(--text-secondary); }
+        .slide p strong { color: var(--text-primary); }
+        .slide ul, .slide ol { margin-bottom: 1rem; padding-left: 1.5rem; color: var(--text-secondary); }
+        .slide li { margin-bottom: 0.4rem; }
+        .slide li strong { color: var(--text-primary); }
+        .slide code { background: var(--bg-code); padding: 0.1rem 0.35rem; border-radius: 3px; font-family: var(--font-mono); font-size: 0.85em; color: var(--accent); }
+        .table-wrap { overflow-x: auto; margin: 1.25rem 0; border-radius: 8px; border: 1px solid var(--border); }
+        table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+        th { background: var(--bg-code); color: var(--accent); font-weight: 600; text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid var(--border); font-family: var(--font-display); white-space: nowrap; }
+        td { padding: 0.6rem 1rem; border-bottom: 1px solid var(--border); color: var(--text-secondary); vertical-align: top; }
+        tr:last-child td { border-bottom: none; }
+        tr:nth-child(even) td { background: rgba(13, 17, 23, 0.5); }
+        .diagram-grid { display: grid; gap: 0.75rem; margin: 1.5rem 0; padding: 1.5rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; }
+        .diagram-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+        .diagram-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .diagram-panel { padding: 1rem; background: var(--bg-code); border: 1px solid var(--border); border-radius: 6px; }
+        .diagram-panel.accent-border { border-left: 3px solid var(--accent); }
+        .diagram-panel.r { border-left: 3px solid var(--accent-2); }
+        .diagram-panel.y { border-left: 3px solid var(--accent-3); }
+        .diagram-panel.g { border-left: 3px solid var(--accent-4); }
+        .diagram-panel h4 { font-family: var(--font-display); font-size: 1rem; color: var(--accent); margin-bottom: 0.5rem; }
+        .diagram-panel.r h4 { color: var(--accent-2); } .diagram-panel.y h4 { color: var(--accent-3); } .diagram-panel.g h4 { color: var(--accent-4); }
+        .diagram-panel p, .diagram-panel ul { font-size: 0.9rem; }
+        .callout { background: var(--bg-card); border-left: 3px solid var(--accent); border-radius: 0 8px 8px 0; padding: 1rem 1.25rem; margin: 1.25rem 0; }
+        .callout p { margin-bottom: 0; }
+        .callout .callout-label { font-family: var(--font-mono); font-size: 0.75rem; color: var(--accent); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.3rem; }
+        .canvas-wrap { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; margin: 1.25rem 0; overflow-x: auto; }
+        .canvas-wrap canvas, .canvas-wrap svg { display: block; margin: 0 auto; max-width: 100%; }
+        .control-panel { background: var(--bg-card); border: 1px solid var(--border); border-radius: 8px; padding: 1.25rem; margin: 1.25rem 0; }
+        .control-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-bottom: 0.75rem; }
+        .control-row label { font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary); min-width: 130px; }
+        .control-row input[type="range"] { flex: 1; min-width: 150px; accent-color: var(--accent); }
+        .control-row select { background: var(--bg-code); border: 1px solid var(--border); color: var(--text-primary); border-radius: 4px; padding: 0.3rem 0.5rem; font-family: var(--font-mono); font-size: 0.8rem; }
+        .control-row .val { font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent); min-width: 80px; text-align: right; }
+        .btn { font-family: var(--font-mono); font-size: 0.8rem; padding: 0.4rem 0.9rem; background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); border-radius: 4px; cursor: pointer; transition: background 0.15s ease; }
+        .btn:hover { background: rgba(167,139,250,0.25); }
+        .btn.secondary { background: var(--bg-code); color: var(--text-secondary); border-color: var(--border); }
+        .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem; margin-top: 0.75rem; }
+        .metric { background: var(--bg-code); border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem 0.8rem; text-align: center; }
+        .metric .metric-label { font-family: var(--font-mono); font-size: 0.7rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.08em; }
+        .metric .metric-value { font-family: var(--font-display); font-size: 1.25rem; color: var(--accent); font-weight: 600; margin-top: 0.2rem; }
+        .contents-list { list-style: none; padding-left: 0; counter-reset: contents; }
+        .contents-list li { counter-increment: contents; padding: 0.6rem 0; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 1rem; }
+        .contents-list li:last-child { border-bottom: none; }
+        .contents-list li::before { content: counter(contents, decimal-leading-zero); font-family: var(--font-mono); font-size: 0.85rem; color: var(--accent); min-width: 2rem; }
+        .contents-list a { color: var(--text-primary); text-decoration: none; }
+        .contents-list a:hover { color: var(--accent); }
+        .footer { text-align: center; padding: 3rem 1.5rem; color: var(--text-secondary); font-size: 0.85rem; border-top: 1px solid var(--border); max-width: var(--max-width); margin: 0 auto; }
+        .footer a { color: var(--accent); text-decoration: none; }
+        .katex { color: var(--text-primary); } .katex-display { margin: 1rem 0; overflow-x: auto; overflow-y: hidden; }
+        @media (max-width: 640px) { .slide { padding: 3rem 1rem; min-height: auto; } .slide-number { font-size: 3rem; top: 1.5rem; right: 1rem; } .slide h2 { font-size: 1.5rem; } .diagram-grid.cols-2, .diagram-grid.cols-3 { grid-template-columns: 1fr; } .hero h1 { font-size: 1.8rem; } table { font-size: 0.78rem; } }
+    </style>
+</head>
+<body>
+
+<header class="hero">
+    <div class="series-label">Linear Algebra for AI &mdash; Presentation 10</div>
+    <h1>Attention as <span class="accent">Linear Algebra</span></h1>
+    <p class="subtitle">Q, K, V are learned projections. The attention matrix is row-stochastic. The output is a row-by-row weighted average of value vectors. Read this way, attention loses its mystery and becomes a piece of crystallised linear algebra.</p>
+
+    <div class="tags">
+        <span class="tag">Q K V</span><span class="tag">scaled dot product</span>
+        <span class="tag">softmax row-stochastic</span><span class="tag">multi-head</span>
+        <span class="tag">causal mask</span><span class="tag">GQA</span>
+    </div>
+
+    <div class="pipeline">
+        <span class="pipeline-step">X (B,L,d)</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">Q,K,V projections</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">QK<sup>⊤</sup>/√d</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">softmax (rowwise)</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">A·V</span>
+        <span class="pipeline-arrow">&rarr;</span>
+        <span class="pipeline-step">W<sub>O</sub></span>
+    </div>
+</header>
+
+<section class="slide" id="slide-00">
+    <div class="slide-number">00</div>
+    <h2>Topics We'll Cover</h2>
+    <ul class="contents-list">
+        <li><a href="#slide-01">Scaled Dot-Product Attention in One Equation</a></li>
+        <li><a href="#slide-02">Q, K, V as Learned Projections</a></li>
+        <li><a href="#slide-03">$QK^\top$ &mdash; the Score Matrix</a></li>
+        <li><a href="#slide-04">Softmax Rowwise &mdash; the Stochastic Matrix</a></li>
+        <li><a href="#slide-05">$A V$ &mdash; Output as Weighted Sum of Values</a></li>
+        <li><a href="#slide-06">Multi-Head Attention as Block-Diagonal Projection</a></li>
+        <li><a href="#slide-07">$W_O$ &mdash; the Concat-and-Mix Step</a></li>
+        <li><a href="#slide-08">Causal Mask, Padding Mask, Sliding Window</a></li>
+        <li><a href="#slide-09">GQA &amp; MQA &mdash; Sharing K and V</a></li>
+        <li><a href="#slide-10">Interactive: Attention Playground</a></li>
+        <li><a href="#slide-11">Cheat Sheet</a></li>
+    </ul>
+</section>
+
+<section class="slide" id="slide-01">
+    <div class="slide-number">01</div>
+    <h2>Scaled Dot-Product Attention in One Equation</h2>
+    <p>$$\mathrm{Attention}(Q, K, V) = \mathrm{softmax}\!\left(\frac{Q K^\top}{\sqrt{d_h}}\right) V.$$</p>
+
+    <p>Three matrices in, one matrix out. Shapes (single head, single batch element):</p>
+    <ul>
+        <li>$Q \in \mathbb{R}^{L \times d_h}$ &mdash; one query per token, head dim $d_h$.</li>
+        <li>$K \in \mathbb{R}^{L \times d_h}$ &mdash; one key per token, same head dim.</li>
+        <li>$V \in \mathbb{R}^{L \times d_v}$ &mdash; one value per token, value dim $d_v$ (usually $= d_h$).</li>
+        <li>$Q K^\top \in \mathbb{R}^{L \times L}$ &mdash; the score matrix, one number per query-key pair.</li>
+        <li>Output $\in \mathbb{R}^{L \times d_v}$ &mdash; one updated representation per token.</li>
+    </ul>
+
+    <p>The whole equation is two matmuls and one rowwise softmax. We will look at each piece, in linear-algebra terms, in the next eight slides.</p>
+
+    <div class="callout">
+        <div class="callout-label">Two ways to read this equation</div>
+        <p><strong>(1) Per query.</strong> For each query row $\mathbf{q}_i$, attention computes scores $\mathbf{q}_i^\top \mathbf{k}_j / \sqrt{d_h}$ for every key, softmaxes them across $j$, then weighted-averages the value rows. <strong>(2) Per key.</strong> Each key $\mathbf{k}_j$ contributes to every query in proportion to its score. Either reading is correct; both will appear in the slides ahead.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-02">
+    <div class="slide-number">02</div>
+    <h2>Q, K, V as Learned Projections</h2>
+    <p>For an input residual stream $X \in \mathbb{R}^{L \times d_{model}}$ (one token per row, $d_{model} = $ hidden width), each head computes</p>
+    <p>$$Q = X W_Q, \qquad K = X W_K, \qquad V = X W_V,$$</p>
+    <p>with $W_Q, W_K, W_V \in \mathbb{R}^{d_{model} \times d_h}$. Each is a linear <strong>down-projection</strong> from the residual stream into a head-specific subspace of dimension $d_h$ (deck 05).</p>
+
+    <h3>What each projection does</h3>
+    <div class="diagram-grid cols-3">
+        <div class="diagram-panel accent-border">
+            <h4>$W_Q$ &mdash; the question</h4>
+            <p>Each row of $W_Q^\top$ is a "thing to look for" detector. $\mathbf{q}_i = W_Q^\top \mathbf{x}_i$ asks: "what about my context do I need to find?"</p>
+        </div>
+        <div class="diagram-panel y">
+            <h4>$W_K$ &mdash; the address</h4>
+            <p>Each row of $W_K^\top$ produces a key tag. $\mathbf{k}_j$ says "this is what I, position $j$, advertise." The dot product $\mathbf{q}_i^\top \mathbf{k}_j$ measures advertise-vs-need similarity.</p>
+        </div>
+        <div class="diagram-panel g">
+            <h4>$W_V$ &mdash; the payload</h4>
+            <p>$\mathbf{v}_j$ is the actual content position $j$ contributes if attended-to. The output is a weighted average of $V$'s rows.</p>
+        </div>
+    </div>
+
+    <h3>Why three separate projections</h3>
+    <p>Could $K$ just be $X$? It could, but it would tie the "address" of a token to its raw value. Separating $W_K$ and $W_V$ lets a token <em>advertise</em> something different from what it <em>contributes</em>. The Q/K split lets a query also be different from its own key &mdash; useful when you want a token to attend to itself or to other tokens in a non-symmetric way.</p>
+
+    <p>Empirically: in mechanistic interpretability work (Elhage et al., Anthropic 2021), $W_Q W_K^\top$ and $W_O W_V$ are studied as "QK circuit" and "OV circuit" respectively &mdash; the actual learnable directions of attention behaviour live in these products, not in the individual matrices.</p>
+</section>
+
+<section class="slide" id="slide-03">
+    <div class="slide-number">03</div>
+    <h2>$QK^\top$ &mdash; the Score Matrix</h2>
+    <p>The matrix $S = QK^\top \in \mathbb{R}^{L \times L}$ has entry $(i, j)$ equal to $\mathbf{q}_i^\top \mathbf{k}_j$ &mdash; a single scalar, the affinity between query $i$ and key $j$.</p>
+
+    <p>Read it as <strong>view 1 of matmul</strong> (deck 03): every entry is one dot product of a row of $Q$ with a row of $K$ (after transposing). Or read it as <strong>view 4</strong>: $S = \sum_d Q_{:,d}\, K_{:,d}^\top$ &mdash; a sum over head-dimensions of rank-1 outer products. Either reading works.</p>
+
+    <h3>Properties of $S$</h3>
+    <ul>
+        <li><strong>Generally not symmetric.</strong> $S_{ij} = \mathbf{q}_i^\top \mathbf{k}_j \neq \mathbf{q}_j^\top \mathbf{k}_i = S_{ji}$ in general &mdash; queries and keys are different objects.</li>
+        <li><strong>Rank.</strong> $\mathrm{rank}(S) \le d_h$. With $d_h = 64$ and $L = 32{,}768$, $S$ is a $32k \times 32k$ matrix of rank at most 64. Massively low-rank &mdash; this is the "low-rank bottleneck" identified by Bhojanapalli et al. (2020).</li>
+        <li><strong>Scaling.</strong> Divided by $\sqrt{d_h}$ for the variance reason in deck 04, slide 08.</li>
+    </ul>
+
+    <h3>Why the rank constraint matters</h3>
+    <p>A rank-$d_h$ score matrix can express only $d_h$ independent "lines of attention pattern". For tasks needing finer granularity, the model uses <em>multiple heads</em> to combine different rank-$d_h$ patterns. With $H = 32$ heads and $d_h = 128$ each, the effective combined rank is $\sum_h d_h = 4096$ &mdash; full $d_{model}$. <em>The number of heads is not a hyperparameter chosen at random; it's the ratio of $d_{model}$ to a per-head budget that has to stay below the softmax saturation regime.</em></p>
+</section>
+
+<section class="slide" id="slide-04">
+    <div class="slide-number">04</div>
+    <h2>Softmax Rowwise &mdash; the Stochastic Matrix</h2>
+    <p>Apply softmax to each row of $S/\sqrt{d_h}$:</p>
+    <p>$$A_{ij} = \frac{\exp(S_{ij}/\sqrt{d_h})}{\sum_{k} \exp(S_{ik}/\sqrt{d_h})}.$$</p>
+    <p>The result $A \in \mathbb{R}^{L \times L}$ is a <strong>row-stochastic matrix</strong>: every entry is in $[0, 1]$ and every row sums to 1.</p>
+
+    <h3>Properties of a row-stochastic matrix</h3>
+    <ul>
+        <li><strong>$A \mathbf{1} = \mathbf{1}$:</strong> $\mathbf{1}$ is a right eigenvector with eigenvalue 1.</li>
+        <li><strong>Largest eigenvalue is exactly 1</strong> by Perron-Frobenius, since entries are non-negative.</li>
+        <li><strong>$AV$ is a row-by-row convex combination.</strong> Each row of the output is in the convex hull of the rows of $V$.</li>
+    </ul>
+
+    <p>That last property is the load-bearing one. $A V$ doesn't invent new information &mdash; it averages existing value vectors. The model's job in choosing $A$ is to decide <em>which average to take per query</em>.</p>
+
+    <div class="callout">
+        <div class="callout-label">Why softmax and not something simpler</div>
+        <p>You could use ReLU or Sigmoid to make scores non-negative. But softmax has three properties that matter: (1) row-sums to 1, so the output stays in the convex hull of values regardless of score magnitudes; (2) exponential, so a small lead in score becomes a near-monopoly on probability mass &mdash; the "winner take most" property that gives sparse attention to the most relevant key; (3) the gradient-of-softmax-cross-entropy collapses to $\mathbf{p} - \mathbf{y}^\star$ (deck 09), which makes training pleasant. Linear attention (deck 03) replaces softmax with a kernel feature-map and gives up (1) and (2) for asymptotic FLOPs savings.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-05">
+    <div class="slide-number">05</div>
+    <h2>$A V$ &mdash; Output as Weighted Sum of Values</h2>
+    <p>The final attention output is the matrix product $O = AV \in \mathbb{R}^{L \times d_v}$. Reading this with view 3 of matmul (rows-as-combinations):</p>
+    <p>$$O_{i,:} = \sum_{j} A_{ij}\, V_{j,:}.$$</p>
+
+    <p>Each output token $i$ is a <strong>convex combination of the input value tokens</strong>, weighted by the attention probabilities. This is the cleanest possible reading: <em>attention computes a token-specific weighted average of all token values</em>.</p>
+
+    <h3>The OV circuit</h3>
+    <p>Going back to the residual stream, the attention head writes</p>
+    <p>$$\Delta X = (A V) W_O = A X (W_V W_O).$$</p>
+    <p>The product $W_V W_O \in \mathbb{R}^{d_{model} \times d_{model}}$ is the <strong>OV circuit</strong> &mdash; the per-head linear map from "what's in the residual stream" to "what gets written back". Combined with the QK circuit $W_Q W_K^\top$ (which determines <em>where</em> attention flows), these two products are the right-sized abstractions for understanding what an attention head <em>does</em> mechanistically.</p>
+
+    <div class="callout">
+        <div class="callout-label">"Attention is information routing"</div>
+        <p>The QK circuit says <em>which token to read from</em>. The OV circuit says <em>what content to copy</em>. Together they implement a token-conditional routing of information across positions, with no new information created &mdash; only re-mixing of value-projections of existing residual-stream contents. This is the attention head's atomic operation.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-06">
+    <div class="slide-number">06</div>
+    <h2>Multi-Head Attention as Block-Diagonal Projection</h2>
+    <p>Multi-head attention runs $H$ heads in parallel, each with its own $W_Q^{(h)}, W_K^{(h)}, W_V^{(h)}$ of shape $\mathbb{R}^{d_{model} \times d_h}$ where $d_h = d_{model}/H$.</p>
+
+    <p>Stacking heads as block-columns:</p>
+    <p>$$W_Q = \big[\, W_Q^{(1)} \mid W_Q^{(2)} \mid \cdots \mid W_Q^{(H)} \,\big] \in \mathbb{R}^{d_{model} \times d_{model}}.$$</p>
+
+    <p>And similarly for $W_K, W_V$. Each <em>head's</em> projection is a down-projection to $d_h$; the <em>concatenation</em> recovers the full $d_{model}$. Per-head attention happens independently.</p>
+
+    <h3>Why $H$ heads with $d_h$ each, instead of one head with $d_{model}$</h3>
+    <ul>
+        <li><strong>Multiple attention patterns at once.</strong> Each head's score matrix is rank $\le d_h$. With one head you get one pattern of rank $\le d_{model}$; with $H$ heads you get $H$ separate patterns. Empirically the interpretable circuits live in individual heads, not in the raw rank-$d_{model}$ score.</li>
+        <li><strong>Same total FLOPs.</strong> $H$ matmuls of shape $L \times L \times d_h$ has the same FLOP count as one matmul of shape $L \times L \times d_{model}$. The cost is identical; the structure differs.</li>
+        <li><strong>Routing diversity.</strong> Different heads can specialise: copying, induction, name-binding, position lookup. The "circuits" decomposition (Anthropic, Olsson et al. 2022) finds these specialised heads in real models.</li>
+    </ul>
+
+    <h3>Standard head counts</h3>
+    <ul>
+        <li>GPT-2 small: $d_{model} = 768$, $H = 12$, $d_h = 64$.</li>
+        <li>Llama-2 7B: $d_{model} = 4096$, $H = 32$, $d_h = 128$.</li>
+        <li>GPT-3 175B: $d_{model} = 12288$, $H = 96$, $d_h = 128$.</li>
+    </ul>
+    <p>Note $d_h$ stays roughly constant at 64-128 across model sizes &mdash; a different scaling regime than $H$ or $d_{model}$.</p>
+</section>
+
+<section class="slide" id="slide-07">
+    <div class="slide-number">07</div>
+    <h2>$W_O$ &mdash; the Concat-and-Mix Step</h2>
+    <p>Each head produces an output $O^{(h)} \in \mathbb{R}^{L \times d_h}$. The $H$ heads are concatenated along the feature dim,</p>
+    <p>$$O = \big[\, O^{(1)} \mid O^{(2)} \mid \cdots \mid O^{(H)} \,\big] \in \mathbb{R}^{L \times d_{model}},$$</p>
+    <p>then projected back to the residual stream by $W_O \in \mathbb{R}^{d_{model} \times d_{model}}$:</p>
+    <p>$$\mathrm{MHA}(X) = O W_O.$$</p>
+
+    <h3>Block decomposition of $W_O$</h3>
+    <p>Partition $W_O$ into $H$ horizontal blocks $W_O^{(1)}, \ldots, W_O^{(H)}$ each of shape $\mathbb{R}^{d_h \times d_{model}}$. Then</p>
+    <p>$$O W_O = \sum_{h=1}^H O^{(h)} W_O^{(h)}.$$</p>
+    <p>The full output is a <em>sum</em> over heads of "this head's output, projected up to $d_{model}$". Each head writes a contribution to the residual stream independently; the residual stream is the bus that adds them up.</p>
+
+    <div class="callout">
+        <div class="callout-label">Why this decomposition matters</div>
+        <p>Reading attention this way makes a fact pop out: <strong>each head writes into the residual stream along its own column-space of $W_O^{(h)}$</strong>. Two heads with disjoint column spaces don't interfere; two heads with overlapping spaces compete. Mechanistic interpretability (Anthropic's "Mathematical Framework for Transformer Circuits") uses exactly this decomposition to understand what each head contributes.</p>
+    </div>
+</section>
+
+<section class="slide" id="slide-08">
+    <div class="slide-number">08</div>
+    <h2>Causal Mask, Padding Mask, Sliding Window</h2>
+    <p>Attention as defined would let token $i$ peek at every other token, including future ones. For autoregressive language modelling we forbid future-peeking by adding a <strong>mask</strong> to the score matrix before softmax:</p>
+    <p>$$S' = S + M,$$</p>
+    <p>where $M_{ij}$ is $0$ for allowed $(i, j)$ pairs and $-\infty$ for forbidden ones. After exp-and-normalise, forbidden positions get probability 0.</p>
+
+    <div class="diagram-grid cols-3">
+        <div class="diagram-panel accent-border">
+            <h4>Causal mask</h4>
+            <p>$M_{ij} = 0$ if $j \le i$, else $-\infty$. Lower-triangular allowed region. Used in every decoder LLM.</p>
+        </div>
+        <div class="diagram-panel y">
+            <h4>Padding mask</h4>
+            <p>$M_{ij} = -\infty$ if $j$ is a pad token. Lets you batch sequences of different lengths.</p>
+        </div>
+        <div class="diagram-panel g">
+            <h4>Sliding-window</h4>
+            <p>$M_{ij} = -\infty$ if $|i - j| &gt; w$. Used by Mistral-7B (w = 4096), Longformer, etc. Per-token compute drops from $O(L)$ to $O(w)$.</p>
+        </div>
+    </div>
+
+    <h3>The causal mask doesn't change the FLOPs</h3>
+    <p>You still compute the full $L \times L$ score matrix, then mask. Naive attention is $O(L^2)$ in compute and memory regardless. FlashAttention (deck 12) tiles the computation to avoid materialising the full mask, which is where the actual savings come from.</p>
+
+    <h3>Subtler structured masks</h3>
+    <ul>
+        <li><strong>Block-sparse</strong> (BigBird, Longformer): some positions attend globally, others locally. Reduces FLOPs.</li>
+        <li><strong>Bi-directional</strong> (BERT, RoBERTa): no mask. Useful for encoder-only models that see the whole sequence at once.</li>
+        <li><strong>Prefix-LM</strong> (T5 / UL2): no mask within the prompt, causal mask within the completion.</li>
+    </ul>
+</section>
+
+<section class="slide" id="slide-09">
+    <div class="slide-number">09</div>
+    <h2>GQA &amp; MQA &mdash; Sharing K and V</h2>
+    <p>Standard MHA has $H$ separate $W_K, W_V$ projections, so the KV cache has $H \cdot d_h \cdot L = d_{model} \cdot L$ values per layer (per K and per V). For long-context inference this dominates memory.</p>
+
+    <h3>The fix: share K and V across heads</h3>
+    <div class="diagram-grid cols-3">
+        <div class="diagram-panel accent-border">
+            <h4>MHA &mdash; full</h4>
+            <p>$H$ Q-heads, $H$ K-heads, $H$ V-heads. KV cache = $2 H d_h L = 2 d_{model} L$ floats.</p>
+        </div>
+        <div class="diagram-panel y">
+            <h4>GQA &mdash; grouped</h4>
+            <p>$H$ Q-heads, $G &lt; H$ K-heads, $G$ V-heads. Each Q-head shares K, V with $H/G$ neighbours. KV cache = $2 G d_h L = 2(d_{model}/H)\cdot G \cdot L$.</p>
+            <p>Used by Llama-2 70B, Llama-3, Mixtral, GPT-4-class.</p>
+        </div>
+        <div class="diagram-panel g">
+            <h4>MQA &mdash; multi-query</h4>
+            <p>$G = 1$ &mdash; one K and V shared by all heads. KV cache = $2 d_h L$, cut by factor $H$. Used by PaLM, Falcon. Some quality drop on training-from-scratch; almost none if introduced after the fact.</p>
+        </div>
+    </div>
+
+    <h3>The numbers for Llama-3 70B</h3>
+    <ul>
+        <li>$d_{model} = 8192$, $H = 64$, $d_h = 128$, $G = 8$ (GQA).</li>
+        <li>KV cache shrinks from $2 \cdot 8192 \cdot L$ to $2 \cdot 8 \cdot 128 \cdot L = 2 \cdot 1024 \cdot L$ &mdash; an 8&times; reduction.</li>
+        <li>For $L = 8192$: 256 MiB per layer (MHA) vs 32 MiB (GQA). At 80 layers, that's 20 GiB vs 2.5 GiB just for KV cache.</li>
+    </ul>
+
+    <p>GQA is a low-rank trick (deck 07) applied to a different structure: instead of compressing $W_K$ to low rank, we constrain different heads to <em>share</em> the same $W_K$. Same Eckart-Young flavour; different parameterisation.</p>
+</section>
+
+<section class="slide" id="slide-10">
+    <div class="slide-number">10</div>
+    <h2>Interactive: Attention Playground</h2>
+    <p>Drag the temperature slider to see how softmax behaves as scores get larger or smaller; switch between unmasked, causal, and sliding-window. The right matrix is the resulting attention pattern $A$ (rows = queries, columns = keys, brightness = probability).</p>
+
+    <div class="control-panel">
+        <div class="control-row">
+            <label>Mask</label>
+            <select id="att-mask">
+                <option value="none">None</option>
+                <option value="causal" selected>Causal</option>
+                <option value="window">Sliding window (w=2)</option>
+            </select>
+        </div>
+        <div class="control-row">
+            <label>Temperature τ</label>
+            <input type="range" id="att-tau" min="0.05" max="3" step="0.05" value="1">
+            <span class="val" id="att-tauv">1.00</span>
+        </div>
+        <div class="control-row">
+            <label>√d_h scale</label>
+            <input type="range" id="att-scale" min="0.5" max="3" step="0.1" value="1">
+            <span class="val" id="att-scalev">1.0</span>
+        </div>
+        <div class="control-row">
+            <button class="btn" id="att-rand">Random Q, K</button>
+            <button class="btn secondary" id="att-induct">Induction-head pattern</button>
+            <button class="btn secondary" id="att-prev">Previous-token pattern</button>
+        </div>
+    </div>
+
+    <div class="canvas-wrap">
+        <svg id="att-svg" viewBox="0 0 720 320" width="720" height="320" xmlns="http://www.w3.org/2000/svg">
+            <rect width="720" height="320" fill="#0d1117"/>
+            <text x="40" y="30" fill="#a78bfa" font-family="Space Grotesk" font-size="14" font-weight="600">Score S = QK<tspan baseline-shift="super" font-size="9">⊤</tspan>/√d</text>
+            <text x="280" y="30" fill="#a78bfa" font-family="Space Grotesk" font-size="14" font-weight="600">Mask</text>
+            <text x="500" y="30" fill="#a78bfa" font-family="Space Grotesk" font-size="14" font-weight="600">Attention A = softmax(S)</text>
+            <g id="att-S"></g>
+            <g id="att-mask-g"></g>
+            <g id="att-A"></g>
+        </svg>
+    </div>
+
+    <p style="font-size: 0.95rem;">The attention matrix on the right is row-stochastic: each row sums to 1. Crank temperature high to see attention spread (uniform-like rows); crank it low to see attention sharpen onto a single key per query.</p>
+
+    <script>
+    (function(){
+        var L = 8;
+        var d = 4;
+        var Q = [], K = [];
+        var maskKind = 'causal';
+        var tau = 1.0;
+        var scale = 1.0;
+        function rand_qk() {
+            Q = []; K = [];
+            for (var i = 0; i < L; i++) {
+                Q.push([]); K.push([]);
+                for (var j = 0; j < d; j++) { Q[i].push((Math.random()-0.5)*2); K[i].push((Math.random()-0.5)*2); }
+            }
+        }
+        function induction_pattern() {
+            // Build Q, K such that token i ~ token (i-1)
+            Q = []; K = [];
+            for (var i = 0; i < L; i++) {
+                Q.push([]); K.push([]);
+                for (var j = 0; j < d; j++) { Q[i].push(j === i % d ? 1 : 0); K[i].push(j === (i+1) % d ? 1 : 0); }
+            }
+        }
+        function prev_token_pattern() {
+            Q = []; K = [];
+            for (var i = 0; i < L; i++) {
+                Q.push([]); K.push([]);
+                for (var j = 0; j < d; j++) {
+                    Q[i].push(j === i % d ? 1 : 0);
+                    K[i].push(j === (i-1+d) % d ? 1 : 0);
+                }
+            }
+        }
+        function compute() {
+            var S = [];
+            for (var i = 0; i < L; i++) { S.push([]); for (var j = 0; j < L; j++) {
+                var s = 0;
+                for (var k = 0; k < d; k++) s += Q[i][k] * K[j][k];
+                S[i].push(s / scale);
+            } }
+            var M = [];
+            for (var i = 0; i < L; i++) { M.push([]); for (var j = 0; j < L; j++) {
+                if (maskKind === 'causal' && j > i) M[i].push(-Infinity);
+                else if (maskKind === 'window' && Math.abs(i - j) > 2) M[i].push(-Infinity);
+                else M[i].push(0);
+            } }
+            // softmax with temperature
+            var A = [];
+            for (var i = 0; i < L; i++) {
+                var row = []; var maxv = -Infinity;
+                for (var j = 0; j < L; j++) { var v = (S[i][j] + M[i][j]) / tau; row.push(v); if (v > maxv) maxv = v; }
+                var sum = 0;
+                for (var j = 0; j < L; j++) row[j] = (row[j] === -Infinity) ? 0 : Math.exp(row[j] - maxv);
+                for (var j = 0; j < L; j++) sum += row[j];
+                if (sum > 1e-12) for (var j = 0; j < L; j++) row[j] /= sum;
+                A.push(row);
+            }
+            return {S: S, M: M, A: A};
+        }
+        function drawMatrix(elId, M, ox, oy, opts) {
+            var sz = 22, gap = 1;
+            var s = '';
+            // colour scale: opts.kind === 'S' uses violet pos / pink neg ; 'A' uses gradient violet ; 'mask' uses simple colour
+            for (var i = 0; i < L; i++) for (var j = 0; j < L; j++) {
+                var v = M[i][j];
+                var fill = '#161b22';
+                if (opts.kind === 'A') {
+                    var t = Math.min(1, Math.max(0, v));
+                    fill = 'rgba(167,139,250,'+(0.1 + 0.85*t).toFixed(2)+')';
+                } else if (opts.kind === 'S') {
+                    var t = Math.tanh(v / 3);
+                    if (t >= 0) fill = 'rgba(167,139,250,'+(0.1 + 0.85*t).toFixed(2)+')';
+                    else fill = 'rgba(244,114,182,'+(0.1 + 0.85*(-t)).toFixed(2)+')';
+                } else if (opts.kind === 'mask') {
+                    fill = (v === -Infinity) ? '#3a3a3a' : 'rgba(52,211,153,0.3)';
+                }
+                s += '<rect x="'+(ox + j*(sz+gap))+'" y="'+(oy + i*(sz+gap))+'" width="'+sz+'" height="'+sz+'" rx="3" fill="'+fill+'" stroke="#21262d" stroke-width="0.5"/>';
+                if (opts.kind === 'A' && v > 0.05) {
+                    s += '<text x="'+(ox + j*(sz+gap) + sz/2)+'" y="'+(oy + i*(sz+gap) + sz/2 + 3)+'" fill="#fff" font-family="JetBrains Mono" font-size="8" text-anchor="middle">'+v.toFixed(2)+'</text>';
+                }
+            }
+            document.getElementById(elId).innerHTML = s;
+        }
+        function render() {
+            var r = compute();
+            drawMatrix('att-S', r.S, 40, 50, {kind: 'S'});
+            drawMatrix('att-mask-g', r.M, 280, 50, {kind: 'mask'});
+            drawMatrix('att-A', r.A, 500, 50, {kind: 'A'});
+        }
+        document.getElementById('att-mask').addEventListener('change', function(){ maskKind = this.value; render(); });
+        document.getElementById('att-tau').addEventListener('input', function(){ tau = parseFloat(this.value); document.getElementById('att-tauv').textContent = tau.toFixed(2); render(); });
+        document.getElementById('att-scale').addEventListener('input', function(){ scale = parseFloat(this.value); document.getElementById('att-scalev').textContent = scale.toFixed(1); render(); });
+        document.getElementById('att-rand').addEventListener('click', function(){ rand_qk(); render(); });
+        document.getElementById('att-induct').addEventListener('click', function(){ induction_pattern(); render(); });
+        document.getElementById('att-prev').addEventListener('click', function(){ prev_token_pattern(); render(); });
+        rand_qk(); render();
+    })();
+    </script>
+</section>
+
+<section class="slide" id="slide-11">
+    <div class="slide-number">11</div>
+    <h2>Cheat Sheet</h2>
+    <ul>
+        <li>Scaled dot-product attention: $\mathrm{Attention}(Q, K, V) = \mathrm{softmax}(QK^\top / \sqrt{d_h})\, V$. Two matmuls and a rowwise softmax.</li>
+        <li>$Q, K, V$ are <strong>down-projections</strong> of the residual stream by $W_Q, W_K, W_V \in \mathbb{R}^{d_{model} \times d_h}$ (per head).</li>
+        <li>$S = QK^\top$ has rank $\le d_h$ &mdash; a low-rank score matrix; multi-head structure compensates.</li>
+        <li>$A = \mathrm{softmax}(S/\sqrt{d_h})$ is row-stochastic. $AV$ is a row-by-row convex combination of value rows &mdash; attention <em>routes</em>, doesn't create.</li>
+        <li>Multi-head attention is $H$ parallel attention computations on disjoint $d_h$-dim slices, concatenated and remixed by $W_O$.</li>
+        <li>$W_O$ is best read as $H$ stacked sub-blocks; each head writes its own contribution to the residual stream along its block's column space.</li>
+        <li><strong>QK circuit</strong> $W_Q W_K^\top$ controls where attention flows; <strong>OV circuit</strong> $W_V W_O^{(h)}$ controls what content gets written.</li>
+        <li>Masks are added to $S$ (with $-\infty$ for forbidden) before softmax: causal, padding, sliding-window. Don't change FLOPs in naive attention.</li>
+        <li><strong>GQA / MQA</strong> share $W_K$ and $W_V$ across groups of heads &mdash; cuts KV cache by 8&times; (GQA) or $H$&times; (MQA) at almost no quality cost.</li>
+    </ul>
+
+    <div class="callout">
+        <div class="callout-label">Read next</div>
+        <p>Deck <strong>11 &mdash; Transformer Block Anatomy</strong> walks a tensor through the full block: pre-norm, MHA with all four projections, residual, FFN with up-then-down, residual. Every shape, every matmul, in one place.</p>
+    </div>
+</section>
+
+<footer class="footer">
+    <p>Part of the <a href="https://github.com/BrendanJamesLynskey/LLM_Hub_Linear_Algebra">Linear Algebra for AI / ML</a> series. Sources: Vaswani et al., "Attention Is All You Need", NeurIPS 2017; Elhage et al., "A Mathematical Framework for Transformer Circuits", Anthropic 2021; Olsson et al., "In-context Learning and Induction Heads", Anthropic 2022; Bhojanapalli et al., "Low-Rank Bottleneck in Multi-head Attention Models", ICML 2020; Ainslie et al., "GQA: Training Generalized Multi-Query Transformer Models", EMNLP 2023.</p>
+</footer>
+
+</body>
+</html>
